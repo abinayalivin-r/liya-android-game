@@ -1,0 +1,51 @@
+
+name: Build LIYA Android APK
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Get project files
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Extract Android project
+        run: |
+          unzip LIYA_Android_Project.zip -d project
+          PROJECT_FILE=$(find project -name settings.gradle -print -quit)
+          if [ -z "$PROJECT_FILE" ]; then
+            echo "settings.gradle not found"
+            exit 1
+          fi
+          cd "$(dirname "$PROJECT_FILE")"
+          echo "PROJECT_DIR=$PWD" >> "$GITHUB_ENV"
+
+      - name: Build APK
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.7'
+
+      - name: Run Android build
+        run: cd "$PROJECT_DIR" && gradle assembleDebug
+
+      - name: Save APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: LIYA-Android-APK
+          path: ${{ env.PROJECT_DIR }}/app/build/outputs/apk/debug/app-debug.apk
+          
